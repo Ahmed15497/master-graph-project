@@ -511,6 +511,7 @@ def read_all_products(n_clicks):
                     dbc.CardBody(
                         [
                             html.H5(product["name"], className="card-title"),
+                            html.P(f"ID: {product['productId']}", className="card-text"),
                             html.P(f"Price: {product['price']} EGP", className="card-text"),
                             html.P(f"Stock: {product['stock']}", className="card-text"),
                             html.P(f"Category: {product['category']}", className="card-text"),
