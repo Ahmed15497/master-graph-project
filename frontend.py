@@ -1,13 +1,13 @@
 import dash
 from dash import dcc, html, Input, Output, State, callback, ctx
 import dash_bootstrap_components as dbc
-import requests
 import base64
 from io import BytesIO
 from PIL import Image
+import requests
 
 # Initialize Dash app
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=False)
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 app.title = "E-Commerce Dashboard"
 
 server = app.server
@@ -22,7 +22,7 @@ navbar = dbc.NavbarSimple(
         dbc.NavItem(dbc.NavLink("Admin", href="/admin")),
         dbc.NavItem(dbc.NavLink("About Us", href="/about")),
     ],
-    brand=html.Img(src="/assets/logo.png", height="40px"),  # Adding a logo image
+    brand=html.Img(src="/assets/DSAA_logo.jpeg", height="85px"),  # Adding a logo image
     brand_href="/",
     color="primary",
     dark=True,
@@ -142,87 +142,79 @@ admin_page = html.Div(
                     md=6,
                 ),
                 
+
+
                 # Update Product Section
                 dbc.Col(
                     [
                         html.H3("Update Product"),
                         dbc.Row(
                             [
-                                dbc.Col(
-                                    dbc.Label("Product ID"),
-                                    width=4
-                                ),
-                                dbc.Col(
-                                    dbc.Input(id="update-product-id", placeholder="Enter product ID", type="text"),
-                                    width=8
-                                ),
+                                dbc.Col(dbc.Label("Product ID"), width=4),
+                                dbc.Col(dbc.Input(id="update-product-id", placeholder="Enter product ID", type="number"), width=8),
                             ]
                         ),
                         dbc.Row(
                             [
-                                dbc.Col(
-                                    dbc.Label("Name"),
-                                    width=4
-                                ),
-                                dbc.Col(
-                                    dbc.Input(id="update-product-name", placeholder="Enter product name (optional)"),
-                                    width=8
-                                ),
+                                dbc.Col(dbc.Label("Name"), width=4),
+                                dbc.Col(dbc.Input(id="update-product-name", placeholder="Enter product name (optional)"), width=8),
                             ]
                         ),
                         dbc.Row(
                             [
-                                dbc.Col(
-                                    dbc.Label("Description"),
-                                    width=4
-                                ),
-                                dbc.Col(
-                                    dbc.Textarea(id="update-product-description", placeholder="Enter product description (optional)"),
-                                    width=8
-                                ),
+                                dbc.Col(dbc.Label("Description"), width=4),
+                                dbc.Col(dbc.Textarea(id="update-product-description", placeholder="Enter product description (optional)"), width=8),
                             ]
                         ),
                         dbc.Row(
                             [
-                                dbc.Col(
-                                    dbc.Label("Price"),
-                                    width=4
-                                ),
-                                dbc.Col(
-                                    dbc.Input(id="update-product-price", type="number", placeholder="Enter product price (optional)"),
-                                    width=8
-                                ),
+                                dbc.Col(dbc.Label("Price"), width=4),
+                                dbc.Col(dbc.Input(id="update-product-price", type="number", placeholder="Enter product price (optional)"), width=8),
                             ]
                         ),
                         dbc.Row(
                             [
-                                dbc.Col(
-                                    dbc.Label("Stock"),
-                                    width=4
-                                ),
-                                dbc.Col(
-                                    dbc.Input(id="update-product-stock", type="number", placeholder="Enter product stock (optional)"),
-                                    width=8
-                                ),
+                                dbc.Col(dbc.Label("Stock"), width=4),
+                                dbc.Col(dbc.Input(id="update-product-stock", type="number", placeholder="Enter product stock (optional)"), width=8),
                             ]
                         ),
                         dbc.Row(
                             [
-                                dbc.Col(
-                                    dbc.Label("Category"),
-                                    width=4
-                                ),
-                                dbc.Col(
-                                    dbc.Input(id="update-product-category", placeholder="Enter product category (optional)"),
-                                    width=8
-                                ),
+                                dbc.Col(dbc.Label("Category"), width=4),
+                                dbc.Col(dbc.Input(id="update-product-category", placeholder="Enter product category (optional)"), width=8),
                             ]
                         ),
+                        
+                        # **Photo Upload Area**
+                    dbc.Row(
+                [
+                    dbc.Col(dbc.Label("Product Photo"), width=4),
+                    dbc.Col(
+                        dcc.Upload(
+                            
+                            id="update-product-photo",
+                            children=html.Div(["Drag and Drop or ", html.A("Select File")]),
+                            style={
+                                "width": "100%",
+                                "height": "60px",
+                                "lineHeight": "60px",
+                                "borderWidth": "1px",
+                                "borderStyle": "dashed",
+                                "borderRadius": "5px",
+                                "textAlign": "center",
+                            },
+                        ),
+                        width=8,
+                    ),
+                ]
+            ),
+
                         dbc.Button("Update", id="submit-update-product", color="warning", className="mt-3"),
                         html.Div(id="update-admin-output", className="mt-3"),
                     ],
                     md=6,
                 ),
+
             ]
         ),
         
@@ -364,7 +356,7 @@ def update_product_cards(n_intervals, search_category, sort_price, sort_stock):
                 dbc.CardBody(
                     [
                         html.H5(product["name"], className="card-title"),
-                        html.P(f"Price: ${product['price']}", className="card-text"),
+                        html.P(f"Price: {product['price']} EGP", className="card-text"),
                         html.P(f"Stock: {product['stock']}", className="card-text"),
                         html.P(f"Category: {product['category']}", className="card-text"),
                         html.Img(src=f"data:image/png;base64, {product['photo']}", height="200px", width="auto"),
@@ -406,8 +398,8 @@ def create_product(n_clicks, name, description, price, stock, category, photo):
     mutation = """
     mutation {
       createProduct(name: "%s", description: "%s", price: %f, stock: %d, category: "%s", photo: "%s") {
-        productId
         name
+        description
         price
         stock
         category
@@ -428,6 +420,7 @@ def create_product(n_clicks, name, description, price, stock, category, photo):
     else:
         return f"Error: {response.text}"
 
+
 # Callback to update an existing product
 @app.callback(
     Output("update-admin-output", "children"),
@@ -439,32 +432,40 @@ def create_product(n_clicks, name, description, price, stock, category, photo):
         State("update-product-price", "value"),
         State("update-product-stock", "value"),
         State("update-product-category", "value"),
+        State("update-product-photo", "value"),  # New photo input field
     ],
     prevent_initial_call=True,
 )
-def update_product(n_clicks, product_id, name, description, price, stock, category):
+def update_product(n_clicks, product_id, name, description, price, stock, category, photo):
     if n_clicks is None:
         return ""
-    
+
+
+    # Ensure values are valid
+    price = float(price) if price else 0.0  
+    stock = int(stock) if stock else 0 
+
+    # GraphQL mutation including the photo field
     mutation = """
     mutation {
-      updateProduct(productId: "%s", name: "%s", description: "%s", price: %f, stock: %d, category: "%s") {
+      updateProduct(productId: "%d", name: "%s", description: "%s", price: %f, stock: %d, category: "%s", photo: "%s") {
         productId
         name
         price
         stock
         category
+        photo
       }
     }
-    """ % (product_id, name, description, price, stock, category)
-    
+    """ % (product_id, name, description, price, stock, category, photo)
+
     headers = {"Content-Type": "application/json"}
     response = requests.post(
         GRAPHQL_URL,
         json={"query": mutation},
         headers=headers
     )
-    
+
     if response.status_code == 200:
         return f"Product '{product_id}' updated successfully!"
     else:
@@ -510,7 +511,7 @@ def read_all_products(n_clicks):
                     dbc.CardBody(
                         [
                             html.H5(product["name"], className="card-title"),
-                            html.P(f"Price: ${product['price']}", className="card-text"),
+                            html.P(f"Price: {product['price']} EGP", className="card-text"),
                             html.P(f"Stock: {product['stock']}", className="card-text"),
                             html.P(f"Category: {product['category']}", className="card-text"),
                             html.Img(src=f"data:image/png;base64, {product['photo']}", height="200px", width="auto"),
