@@ -5,12 +5,52 @@ import base64
 from io import BytesIO
 from PIL import Image
 import requests
+from flask import Flask, redirect, url_for, request, session
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+import bcrypt
+import pymongo
+from pymongo import MongoClient
+from pymongo.collection import Collection
+from pymongo.errors import DuplicateKeyError
+
+# MongoDB Connection URI
+uri = "mongodb+srv://ahmedsaad22502145:mongodbmaster@cluster0.eak8u.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+
+# Connect to MongoDB
+client = MongoClient(uri)
+db = client["online_shopping"]
 
 # Initialize Dash app
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
+server = Flask(__name__)  # Main Flask app
+server.secret_key = "supersecretkey"  # Required for session management
+
+app = dash.Dash(__name__, server=server, routes_pathname_prefix="/", external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 app.title = "E-Commerce Dashboard"
 
-server = app.server
+
+# Flask-Login Setup
+login_manager = LoginManager()
+login_manager.init_app(server)
+login_manager.login_view = "/"
+
+# User Class for Flask-Login
+class User(UserMixin):
+    def __init__(self, user_id, email, role, first_name, last_name):
+        self.id = user_id
+        self.email = email
+        self.role = role
+        self.first_name = first_name
+        self.last_name = last_name
+
+
+# 🔄 Load User from MongoDB
+@login_manager.user_loader
+def load_user(user_id):
+    user_data = db["users"].find_one({"_id": int(user_id)})
+    if user_data:
+        return User(user_id=user_data["_id"], email=user_data["email"], role=user_data["role"], first_name=user_data["first_name"], last_name=user_data["last_name"])
+    return None
+
 
 # GraphQL Endpoint
 GRAPHQL_URL = "http://127.0.0.1:8000/graphql"
@@ -21,6 +61,7 @@ navbar = dbc.NavbarSimple(
         dbc.NavItem(dbc.NavLink("Products", href="/products")),
         dbc.NavItem(dbc.NavLink("Admin", href="/admin")),
         dbc.NavItem(dbc.NavLink("About Us", href="/about")),
+        dbc.NavItem(dbc.Button("Logout", id="logout-button")),
     ],
     brand=html.Img(src="/assets/DSAA_logo.jpeg", height="85px"),  # Adding a logo image
     brand_href="/",
@@ -300,6 +341,46 @@ products_page = html.Div(
     ]
 )
 
+
+
+#Login Page
+login_page = html.Div(
+    [
+        html.H1("Login", className="text-center mt-5"),
+        dbc.Container(
+            [
+                dbc.Row(
+                    dbc.Col(
+                        dbc.Input(id="username", type="text", placeholder="Enter Username"),
+                        width=4,
+                        className="mb-3",
+                    ),
+                    justify="center",
+                ),
+                dbc.Row(
+                    dbc.Col(
+                        dbc.Input(id="password", type="password", placeholder="Enter Password"),
+                        width=4,
+                        className="mb-3",
+                    ),
+                    justify="center",
+                ),
+                dbc.Row(
+                    dbc.Col(
+                        dbc.Button("Login", id="login-button", color="primary", className="mt-3"),
+                        width=4,
+                        className="text-center",
+                    ),
+                    justify="center",
+                ),
+                html.Div(id="login-output", className="text-center mt-3"),
+            ]
+        ),
+    ]
+)
+
+
+
 # Layout
 app.layout = html.Div(
     [
@@ -309,18 +390,66 @@ app.layout = html.Div(
     ]
 )
 
+
+
+# 🔑 Login Callback
+@app.callback(
+    Output("login-output", "children"),
+    Input("login-button", "n_clicks"),
+    State("username", "value"),
+    State("password", "value"),
+    prevent_initial_call=True
+)
+def login(n_clicks, email, password):
+    user_data = db["users"].find_one({"email": email})
+    
+    if user_data and bcrypt.checkpw(password.encode(), user_data["hashed_password"].encode()):
+        user = User(user_id=user_data["_id"], email=user_data["email"], role=user_data["role"], first_name=user_data["first_name"], last_name=user_data["last_name"])
+        login_user(user)
+        return dcc.Location(href="/products", id="redirect-dashboard")  # Redirect to Dashboard
+    
+    return "Invalid email or password!"
+
+
+# 🚪 Logout Callback
+@app.callback(
+    Output("url", "pathname"),
+    Input("logout-button", "n_clicks"),
+    prevent_initial_call=True
+)
+def logout(n_clicks):
+    logout_user()
+    return "/"  # Redirect to Home Page
+
+
 # Callbacks for Navigation
 @app.callback(Output("page-content", "children"), Input("url", "pathname"))
 def display_page(pathname):
     if pathname == "/admin":
-        return admin_page
+        if current_user.is_authenticated:
+            return admin_page
+        else:
+            return login_page
     elif pathname == "/products":
-        return products_page
+        if current_user.is_authenticated:
+            return products_page
+        else:
+            return login_page
     elif pathname == "/about":
-        return about_page
+        if current_user.is_authenticated:
+            return about_page
+        else:
+            return login_page
+    elif pathname == "/login":
+        if current_user.is_authenticated:
+            return products_page
+        else:
+            return login_page
     else:
-        return about_page
-
+        if current_user.is_authenticated:
+            return products_page
+        else:
+            return login_page
 
 
 # Callback to fetch all products on load or when filters are updated
