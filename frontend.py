@@ -185,29 +185,30 @@ admin_page = html.Div(
                             ]
                         ),
                         
-                        # **Photo Upload Area**
-                    dbc.Row(
-                [
-                    dbc.Col(dbc.Label("Product Photo"), width=4),
-                    dbc.Col(
-                        dcc.Upload(
-                            
-                            id="update-product-photo",
-                            children=html.Div(["Drag and Drop or ", html.A("Select File")]),
-                            style={
-                                "width": "100%",
-                                "height": "60px",
-                                "lineHeight": "60px",
-                                "borderWidth": "1px",
-                                "borderStyle": "dashed",
-                                "borderRadius": "5px",
-                                "textAlign": "center",
-                            },
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    dbc.Label("Photo"),
+                                    width=4
+                                ),
+                                dbc.Col(
+                                    dcc.Upload(
+                                        id="update-product-photo",
+                                        children=html.Div(["Drag and Drop or ", html.A("Select File")]),
+                                        style={
+                                            "width": "100%",
+                                            "height": "60px",
+                                            "lineHeight": "60px",
+                                            "borderWidth": "1px",
+                                            "borderStyle": "dashed",
+                                            "borderRadius": "5px",
+                                            "textAlign": "center",
+                                        },
+                                    ),
+                                    width=8
+                                ),
+                            ]
                         ),
-                        width=8,
-                    ),
-                ]
-            ),
 
                         dbc.Button("Update", id="submit-update-product", color="warning", className="mt-3"),
                         html.Div(id="update-admin-output", className="mt-3"),
@@ -454,7 +455,7 @@ def create_product(n_clicks, name, description, price, stock, category, photo):
         State("update-product-price", "value"),
         State("update-product-stock", "value"),
         State("update-product-category", "value"),
-        State("update-product-photo", "value"),  # New photo input field
+        State("update-product-photo", "contents"),  # New photo input field
     ],
     prevent_initial_call=True,
 )
@@ -470,6 +471,11 @@ def update_product(n_clicks, product_id, name, description, price, stock, catego
     #stock = int(stock) if stock else 0 
 
     # GraphQL mutation including the photo field
+    if photo is not None:
+        photo_content = base64.b64decode(photo.split(",")[1])
+        image = Image.open(BytesIO(photo_content))
+        # Process image if needed, for now, just encode it to base64
+        photo = base64.b64encode(photo_content).decode("utf-8")
 
     mutation = """
     mutation updateProduct($productId: Int!, $updates: UpdateProductInput!) {
