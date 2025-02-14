@@ -137,6 +137,9 @@ import uvicorn
 from pymongo import MongoClient
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
+from typing import Optional
+
+
 uri = "mongodb+srv://ahmedsaad22502145:mongodbmaster@cluster0.eak8u.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 # Create a new client and connect to the server
 client = MongoClient(uri, server_api=ServerApi('1'))
@@ -269,9 +272,23 @@ class Mutation:
 
 
     @strawberry.mutation
-    def delete_product(self, product_id: int, info) -> bool:
-        result = products_collection.delete_one({"_id": product_id})
-        return result.deleted_count > 0
+    def remove_product(self, product_id: int) -> Optional[bool]:
+        try:
+            print(f"Attempting to remove product with ID: {product_id}")
+
+            result = products_collection.delete_one({"_id": product_id})
+            print("MongoDB delete result:", result.raw_result)
+
+            if result.deleted_count == 0:
+                print(f"Product with ID {product_id} not found or already deleted!")
+                return False
+
+            print(f"Product with ID {product_id} successfully deleted!")
+            return True
+
+        except Exception as e:
+            print(f"ERROR: {e}")
+            return False
 
 # Define a custom context function
 def get_context(request: Request) -> dict:

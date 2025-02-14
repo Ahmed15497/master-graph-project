@@ -215,6 +215,28 @@ admin_page = html.Div(
                     md=6,
                 ),
 
+                dbc.Col(
+                    [
+                        html.H3("Delete Product"),
+                        dbc.Row(
+                            [
+                                dbc.Col(dbc.Label("Product ID"), width=4),
+                                dbc.Col(dbc.Input(id="delete-product-id", type="number", placeholder="Enter product ID"), width=8),
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    dbc.Button("Delete", id="submit-delete-product", color="danger", className="mt-3"),
+                                    width=12, 
+                                ),
+                            ]
+                        ),
+                        html.Div(id="delete-admin-output", className="mt-3"),
+                    ],
+                    md=6, 
+                ),
+
             ]
         ),
         
@@ -439,30 +461,46 @@ def create_product(n_clicks, name, description, price, stock, category, photo):
 def update_product(n_clicks, product_id, name, description, price, stock, category, photo):
     if n_clicks is None:
         return ""
+    
+    print(product_id, name, description, price, stock, category, photo)
 
 
     # Ensure values are valid
-    price = float(price) if price else 0.0  
-    stock = int(stock) if stock else 0 
+    #price = float(price) if price else 0.0  
+    #stock = int(stock) if stock else 0 
 
     # GraphQL mutation including the photo field
+
     mutation = """
-    mutation {
-      updateProduct(productId: "%d", name: "%s", description: "%s", price: %f, stock: %d, category: "%s", photo: "%s") {
-        productId
-        name
-        price
-        stock
-        category
-        photo
-      }
+    mutation updateProduct($productId: Int!, $updates: UpdateProductInput!) {
+        updateProduct(productId: $productId, updates: $updates) {
+            productId
+            name
+            description
+            price
+            stock
+            category
+            photo
+        }
     }
-    """ % (product_id, name, description, price, stock, category, photo)
+    """
+
+    variables = {
+        "productId": product_id,  # Replace with the actual product ID
+        "updates": {
+            "name": name,
+            "description": description,
+            "price": price,
+            "stock": stock,
+            "category": category,
+            "photo": photo
+        }
+    }
 
     headers = {"Content-Type": "application/json"}
     response = requests.post(
         GRAPHQL_URL,
-        json={"query": mutation},
+        json={"query": mutation, "variables": variables},
         headers=headers
     )
 
@@ -523,6 +561,46 @@ def read_all_products(n_clicks):
         return product_cards
     else:
         return f"Error: {response.text}"
+    
+
+@app.callback(
+    Output("delete-admin-output", "children"),
+    Input("submit-delete-product", "n_clicks"),
+    State("delete-product-id", "value"),
+    prevent_initial_call=True
+)
+def delete_product(n_clicks, product_id):
+    if not product_id:
+        return "Please enter a product ID."
+    
+
+
+    mutation = """
+    mutation RemoveProduct($productId: Int!) {
+        removeProduct(productId: $productId)
+    }
+    """
+
+    # Define the variables
+    variables = {
+        "productId": product_id  # Replace with the actual product ID to delete
+    }
+
+    # Make the request
+    response = requests.post(
+        GRAPHQL_URL,
+        json={"query": mutation, "variables": variables},
+        headers={"Content-Type": "application/json"}
+    )
+
+    data = response.json()
+    
+    if "errors" in data:
+        return f"Error: {data['errors'][0]['message']}"
+    
+    return f"Success"
+
+
 
 if __name__ == "__main__":
     app.run_server(debug=True)
